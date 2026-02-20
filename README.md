@@ -7,6 +7,7 @@ A production-style starter for a Telegram bot that allows users to sign up and r
 - `/signup <code>` flow with constant-time signup code verification.
 - SQLite-backed user registry for authentication/authorization of recipients.
 - Weekly scheduled delivery using Telegram JobQueue (Friday 17:00 in configured timezone).
+- Weekly prompt generator now uses a configurable 4-variable assignment engine (essay type, topic, lens, rhetorical brief).
 - Prompt caching layer to avoid expensive re-computation during the same week.
 - Operational shell control script for `start`, `stop`, `restart`, `status`, and `logs`.
 - Structured package layout with tests and linting hooks.

@@ -22,6 +22,21 @@ load_env() {
   set +a
 }
 
+validate_env() {
+  local missing=0
+  for key in TELEGRAM_BOT_TOKEN SIGNUP_CODE; do
+    if [[ -z "${!key:-}" ]]; then
+      echo "Missing required env var: $key"
+      missing=1
+    fi
+  done
+
+  if [[ "$missing" -eq 1 ]]; then
+    echo "Create .env from .env.example and set required values before starting the bot."
+    return 1
+  fi
+}
+
 is_running() {
   [[ -f "$PID_FILE" ]] || return 1
   local pid
@@ -38,6 +53,7 @@ start() {
 
   ensure_venv
   load_env
+  validate_env
 
   echo "Starting bot in attached mode (Ctrl+C to stop)..."
   exec "$VENV_DIR/bin/python" -m essay_bot
@@ -51,6 +67,7 @@ start_bg() {
 
   ensure_venv
   load_env
+  validate_env
 
   nohup "$VENV_DIR/bin/python" -m essay_bot >>"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"

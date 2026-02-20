@@ -27,12 +27,13 @@ A production-style starter for a Telegram bot that allows users to sign up and r
    ```bash
    cp .env.example .env
    ```
-2. Start bot in attached mode (recommended for seeing real-time logs/errors):
+2. Set required credentials (`TELEGRAM_BOT_TOKEN`, `SIGNUP_CODE`) in `.env`.
+3. Start bot in attached mode (recommended for seeing real-time logs/errors):
    ```bash
    ./scripts/botctl.sh start
    ```
    Press `Ctrl+C` to stop it.
-3. Optional detached mode:
+4. Optional detached mode:
    ```bash
    ./scripts/botctl.sh start-bg
    ./scripts/botctl.sh status

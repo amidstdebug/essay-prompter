@@ -2,8 +2,8 @@ import logging
 from datetime import time
 from zoneinfo import ZoneInfo
 
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import ReplyKeyboardMarkup, Update
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from essay_bot.config import settings
 from essay_bot.database import init_db, list_active_users, upsert_user
@@ -15,12 +15,21 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 logger = logging.getLogger("essay_bot")
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+GENERATE_PROMPT_BUTTON = "🎯 Generate essay prompt"
+PROMPT_KEYBOARD = ReplyKeyboardMarkup(
+    [[GENERATE_PROMPT_BUTTON]],
+    resize_keyboard=True,
+)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         await update.message.reply_text(
-            "Welcome! Use /signup <code> to register for weekly Friday essay prompts at 5 p.m."
+            "Welcome! Use /signup <code> to register for weekly Friday essay prompts at 5 p.m.",
+            reply_markup=PROMPT_KEYBOARD,
         )
 
 
@@ -49,7 +58,11 @@ async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Signup failed temporarily. Please try again shortly.")
         return
 
-    await update.message.reply_text("Signup successful. You'll get a prompt every Friday at 5 p.m.")
+    await update.message.reply_text(
+        "Signup successful. You'll get a prompt every Friday at 5 p.m.\n"
+        "You can also use the button below to generate an ad-hoc prompt anytime.",
+        reply_markup=PROMPT_KEYBOARD,
+    )
 
 
 async def prompt_now(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -63,6 +76,10 @@ async def prompt_now(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             )
             return
         await update.message.reply_text(f"Essay prompt:\n\n{prompt_text}")
+
+
+async def generate_prompt_from_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await prompt_now(update, context)
 
 
 async def send_weekly_prompt(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -101,6 +118,9 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("signup", signup))
     application.add_handler(CommandHandler("prompt", prompt_now))
+    application.add_handler(
+        MessageHandler(filters.Regex(f"^{GENERATE_PROMPT_BUTTON}$"), generate_prompt_from_button)
+    )
     application.add_error_handler(on_error)
 
     local_tz = ZoneInfo(settings.app_timezone)

@@ -8,6 +8,7 @@ A production-style starter for a Telegram bot that allows users to sign up and r
 - SQLite-backed user registry for authentication/authorization of recipients.
 - Weekly scheduled delivery using Telegram JobQueue (Friday 17:00 in configured timezone).
 - Weekly prompt generator now uses a configurable 4-variable assignment engine (essay type, topic, lens, rhetorical brief).
+- One-tap in-chat button to generate an ad-hoc essay prompt on demand.
 - Prompt caching layer to avoid expensive re-computation during the same week.
 - Operational shell control script with attached `start` (Ctrl+C to stop) plus detached lifecycle commands `start-bg`, `stop`, `restart`, `status`, and `logs`.
 - Structured package layout with tests and linting hooks.
@@ -33,6 +34,8 @@ A production-style starter for a Telegram bot that allows users to sign up and r
    ./scripts/botctl.sh start
    ```
    Press `Ctrl+C` to stop it.
+
+In chat, tap **🎯 Generate essay prompt** to generate a one-off test prompt anytime.
 4. Optional detached mode:
    ```bash
    ./scripts/botctl.sh start-bg

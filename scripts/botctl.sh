@@ -16,6 +16,12 @@ ensure_venv() {
   fi
 }
 
+load_env() {
+  set -a
+  [[ -f "$ROOT_DIR/.env" ]] && source "$ROOT_DIR/.env"
+  set +a
+}
+
 is_running() {
   [[ -f "$PID_FILE" ]] || return 1
   local pid
@@ -25,23 +31,35 @@ is_running() {
 
 start() {
   if is_running; then
-    echo "Bot already running (PID $(cat "$PID_FILE"))"
+    echo "A detached bot is already running (PID $(cat "$PID_FILE"))."
+    echo "Use '$0 stop' to stop it before running attached mode."
+    return 1
+  fi
+
+  ensure_venv
+  load_env
+
+  echo "Starting bot in attached mode (Ctrl+C to stop)..."
+  exec "$VENV_DIR/bin/python" -m essay_bot
+}
+
+start_bg() {
+  if is_running; then
+    echo "Bot already running in detached mode (PID $(cat "$PID_FILE"))"
     return
   fi
 
   ensure_venv
-  set -a
-  [[ -f "$ROOT_DIR/.env" ]] && source "$ROOT_DIR/.env"
-  set +a
+  load_env
 
   nohup "$VENV_DIR/bin/python" -m essay_bot >>"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"
-  echo "Bot started (PID $(cat "$PID_FILE"))"
+  echo "Bot started in detached mode (PID $(cat "$PID_FILE"))"
 }
 
 stop() {
   if ! is_running; then
-    echo "Bot is not running"
+    echo "No detached bot is running"
     rm -f "$PID_FILE"
     return
   fi
@@ -50,14 +68,14 @@ stop() {
   pid="$(cat "$PID_FILE")"
   kill "$pid"
   rm -f "$PID_FILE"
-  echo "Bot stopped"
+  echo "Detached bot stopped"
 }
 
 status() {
   if is_running; then
-    echo "Bot is running (PID $(cat "$PID_FILE"))"
+    echo "Detached bot is running (PID $(cat "$PID_FILE"))"
   else
-    echo "Bot is not running"
+    echo "No detached bot is running"
   fi
 }
 
@@ -68,12 +86,13 @@ logs() {
 
 case "${1:-}" in
   start) start ;;
+  start-bg) start_bg ;;
   stop) stop ;;
-  restart) stop || true; start ;;
+  restart) stop || true; start_bg ;;
   status) status ;;
   logs) logs ;;
   *)
-    echo "Usage: $0 {start|stop|restart|status|logs}"
+    echo "Usage: $0 {start|start-bg|stop|restart|status|logs}"
     exit 1
     ;;
 esac

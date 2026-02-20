@@ -37,22 +37,41 @@ async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user = update.effective_user
-    upsert_user(
-        telegram_user_id=user.id,
-        chat_id=update.effective_chat.id,
-        username=user.username,
-        first_name=user.first_name,
-    )
+    try:
+        upsert_user(
+            telegram_user_id=user.id,
+            chat_id=update.effective_chat.id,
+            username=user.username,
+            first_name=user.first_name,
+        )
+    except Exception as exc:
+        logger.exception("Failed to register user %s: %s", user.id, exc)
+        await update.message.reply_text("Signup failed temporarily. Please try again shortly.")
+        return
+
     await update.message.reply_text("Signup successful. You'll get a prompt every Friday at 5 p.m.")
 
 
 async def prompt_now(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
-        await update.message.reply_text(f"Essay prompt:\n\n{weekly_prompt()}")
+        try:
+            prompt_text = weekly_prompt()
+        except Exception as exc:
+            logger.exception("Unable to generate prompt on demand: %s", exc)
+            await update.message.reply_text(
+                "Sorry, I could not generate the essay prompt right now. Please try again soon."
+            )
+            return
+        await update.message.reply_text(f"Essay prompt:\n\n{prompt_text}")
 
 
 async def send_weekly_prompt(context: ContextTypes.DEFAULT_TYPE) -> None:
-    users = list_active_users()
+    try:
+        users = list_active_users()
+    except Exception as exc:
+        logger.exception("Unable to load active users: %s", exc)
+        return
+
     prompt_text = weekly_prompt()
     if not users:
         logger.info("No active users to notify")
@@ -68,18 +87,27 @@ async def send_weekly_prompt(context: ContextTypes.DEFAULT_TYPE) -> None:
             logger.warning("Unable to send prompt to chat_id=%s: %s", user.chat_id, exc)
 
 
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.exception(
+        "Unhandled bot exception while processing update=%s",
+        update,
+        exc_info=context.error,
+    )
+
+
 def build_application() -> Application:
     init_db()
     application = Application.builder().token(settings.telegram_bot_token).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("signup", signup))
     application.add_handler(CommandHandler("prompt", prompt_now))
+    application.add_error_handler(on_error)
 
     local_tz = ZoneInfo(settings.app_timezone)
     application.job_queue.run_daily(
         send_weekly_prompt,
         time=time(hour=settings.friday_send_hour, minute=0, tzinfo=local_tz),
-        days=(4,),  # Friday
+        days=(4,),
         name="weekly-essay-prompt",
         job_kwargs={"misfire_grace_time": 60 * 60},
     )

@@ -6,6 +6,10 @@ from cachetools import TTLCache
 from essay_bot.assignment_engine import DIFFICULTY_PROFILES, propose_essay_assignment
 
 PROMPT_CACHE = TTLCache(maxsize=16, ttl=60 * 60 * 24 * 8)
+FALLBACK_PROMPT = (
+    "This week's essay assignment: Describe a meaningful challenge you faced, "
+    "how you approached it, and what you learned."
+)
 
 
 def _difficulty_for_week(year: int, week: int) -> str:
@@ -26,7 +30,10 @@ def weekly_prompt() -> str:
     selected_difficulty = _difficulty_for_week(year, week)
     cache_key = f"{year}-W{week}:{selected_difficulty}"
 
-    if cache_key not in PROMPT_CACHE:
+    if cache_key in PROMPT_CACHE:
+        return PROMPT_CACHE[cache_key]
+
+    try:
         assignment = propose_essay_assignment(
             difficulty=selected_difficulty,
             seed=year * 100 + week,
@@ -34,10 +41,13 @@ def weekly_prompt() -> str:
         prev_year, prev_week, _ = (today - timedelta(weeks=1)).isocalendar()
         previous_difficulty = _difficulty_for_week(prev_year, prev_week)
         previous_label = DIFFICULTY_PROFILES[previous_difficulty]["label"]
-        PROMPT_CACHE[cache_key] = (
+        prompt_text = (
             f"Last week's hidden difficulty was: {previous_label}.\n\n"
             f"This week's essay assignment:\n"
             f"{_blindfold_prompt(assignment['proposed_question'])}"
         )
+    except Exception:
+        prompt_text = FALLBACK_PROMPT
 
-    return PROMPT_CACHE[cache_key]
+    PROMPT_CACHE[cache_key] = prompt_text
+    return prompt_text

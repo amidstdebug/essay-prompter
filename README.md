@@ -9,7 +9,7 @@ A production-style starter for a Telegram bot that allows users to sign up and r
 - Weekly scheduled delivery using Telegram JobQueue (Friday 17:00 in configured timezone).
 - Weekly prompt generator now uses a configurable 4-variable assignment engine (essay type, topic, lens, rhetorical brief).
 - Prompt caching layer to avoid expensive re-computation during the same week.
-- Operational shell control script for `start`, `stop`, `restart`, `status`, and `logs`.
+- Operational shell control script with attached `start` (Ctrl+C to stop) plus detached lifecycle commands `start-bg`, `stop`, `restart`, `status`, and `logs`.
 - Structured package layout with tests and linting hooks.
 
 ## Project layout
@@ -27,17 +27,16 @@ A production-style starter for a Telegram bot that allows users to sign up and r
    ```bash
    cp .env.example .env
    ```
-2. Start bot:
+2. Start bot in attached mode (recommended for seeing real-time logs/errors):
    ```bash
    ./scripts/botctl.sh start
    ```
-3. Check status/logs:
+   Press `Ctrl+C` to stop it.
+3. Optional detached mode:
    ```bash
+   ./scripts/botctl.sh start-bg
    ./scripts/botctl.sh status
    ./scripts/botctl.sh logs
-   ```
-4. Stop bot:
-   ```bash
    ./scripts/botctl.sh stop
    ```
 
